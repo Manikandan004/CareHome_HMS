@@ -1,0 +1,198 @@
+
+-------------------------------------Important concepts to remember
+Concept	Simple explanation
+express.Router()	Creates separate route groups
+router.get()	Handles GET requests
+router.post()	Handles POST requests
+router.put()	Handles PUT requests
+router.patch()	Handles PATCH requests
+router.delete()	Handles DELETE requests
+req.body	Reads request data
+req.params	Reads URL parameters
+req.query	Reads query-string parameters
+req.user	Holds authenticated user information when middleware attaches it
+module.exports	Exports the router or function
+require()	Imports another module
+
+--------------------------------------End points (Rest API's)
+1. Authentication – /api/auth
+Method	Endpoint	Description
+POST	/api/auth/register	Register patient
+POST	/api/auth/login	Login Admin, Doctor or Patient
+
+2. Admin – /api/admin
+Method	Endpoint	Description
+POST	/api/admin/doctors	Add doctor
+GET	/api/admin/doctors	Get all doctors
+PUT	/api/admin/doctors/:id	Update doctor
+DELETE	/api/admin/doctors/:id	Delete doctor
+GET	/api/admin/patients	Get all patients
+PUT	/api/admin/patients/:id	Update patient
+DELETE	/api/admin/patients/:id	Delete patient
+
+3. Doctor – /api/doctor
+Method	Endpoint	Description
+GET	/api/doctor/appointments	View assigned appointments
+PATCH	/api/doctor/appointments/:id/complete	Complete appointment and add comments
+
+4. Patient – /api/patient
+Method	Endpoint	Description
+GET	/api/patient/doctors	View available doctors
+POST	/api/patient/appointments	Book appointment
+GET	/api/patient/appointments	View own appointments
+PUT	/api/patient/appointments/:id	Reschedule appointment
+DELETE	/api/patient/appointments/:id	Cancel appointment
+
+Authorization requirements:
+- Admin endpoints → ADMIN role
+- Doctor endpoints → DOCTOR role
+- Patient endpoints → PATIENT role
+- Registration and login → Public access
+
+----------------------------------Routers
+
+Why do we use router.use() instead of adding middleware to every API?
+
+Without router.use():
+router.get("/doctors", protect, allowRoles("ADMIN"), getDoctors);
+
+router.post("/doctors", protect, allowRoles("ADMIN"), createDoctor);
+
+router.put("/doctors/:id", protect, allowRoles("ADMIN"), updateDoctor);
+
+
+With router.use():
+router.use(protect, allowRoles("ADMIN"));
+
+router.get("/doctors", getDoctors);
+
+router.post("/doctors", createDoctor);
+
+router.put("/doctors/:id", updateDoctor);
+
+
+
+
+GET /api/admin/doctors
+
+
+---------------------JWT token
+Authentication & Authorizaton 
+JWT
+
+Authentication  - Who is the user
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhZmM2ZTc3MzY2NGY5M2JiZDMyNjMwNSIsInJvbGUiOiJQQVRJRU5UIiwiaWF0IjoxNzk0OTI5MjkxLCJleHAiOjE3OTUwMTU2OTF9.lD8hX36QT8OUHpimNR6r5YFbpLbqeH7AEiYi-tWgk5w
+
+Header.Payload.Signature
+
+Authorization -- who should access the end points
+
+Authorization: Bearer eyJhbGciOiJIUzI1Ni...
+
+?. is called optional chaining
+Authorization header
+Bearer eyJhbGciOiJIUzI1Ni...
+
+Part 0
+
+Bearer
+Token type
+Part 1
+
+eyJhbGci...
+Actual JWT token
+
+
+---------------------------------------Integration
+
+Main concepts you should understand
+Before writing integration code, understand these 10 concepts.
+No.	Concept 	What you should learn
+1	HTTP	        How frontend and backend communicate
+2	REST API	How to design and call APIs
+3	HTTP Methods	GET, POST, PUT, PATCH, DELETE
+4	JSON	        How data is exchanged
+5	Axios / Fetch	How React calls backend APIs
+6	CORS	        How to allow frontend-backend communication
+7	HTTP Headers	How to send metadata and JWT tokens
+8	JWT	        How to authenticate users
+9	React State	How to display API responses
+10	Error Handling	How to handle API failures
+
+
+What is an API request and response?
+An API request is the information frontend (React) sends to backend(Express).
+
+An API response is the information backend(Express) sends back to frontend(React).
+
+
+How the Authorization header works
+React
+
+Sends Authorization: Bearer abc123
+
+
+Express
+
+Reads req.headers.authorization
+
+
+JWT Middleware
+
+Extracts token and verifies it using jwt.verify()
+
+
+--------------------AXIOS
+Axios is a JavaScript library used to make HTTP requests from React to a backend.
+
+Suppose your .env file contains:
+VITE_API_URL=http://localhost:5000/api
+
+
+When you call:
+api.get("/patient/doctors");
+
+
+Axios combines the base URL and endpoint:
+http://localhost:5000/api/patient/doctors
+
+----------------add headers in AXIOS interceptoor
+Attach the Authorization header
+if (token)
+  config.headers.Authorization = `Bearer ${token}`;
+
+
+First, it checks whether a token exists.
+
+If it exists, Axios adds this HTTP request header:
+Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+
+
+What is Bearer?
+
+Bearer is an authentication scheme. It indicates that the request is presenting an access token.
+
+Your Express backend reads it using:
+const token = req.headers.authorization
+  ?.split(" ")[1];
+
+
+For example:
+Authorization: Bearer abc123
+
+
+Splitting by space produces:
+["Bearer", "abc123"]
+
+
+Index [1] gives the JWT token:
+abc123
+
+
+Then the backend validates it:
+jwt.verify(token, process.env.JWT_SECRET);
+
+ConditionError 						ThrownBad 
+formatting / missing partsJsonWebTokenError:		 jwt malformed
+Tampered payload or wrong secretJsonWebTokenError: 	 invalid signature
+Passed current timestamp (exp)TokenExpiredError:	 jwt expiredToken used before active date (nbf)
