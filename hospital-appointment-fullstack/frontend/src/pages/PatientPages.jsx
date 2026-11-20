@@ -1,0 +1,30 @@
+import { useEffect,useState } from "react";
+import { CalendarPlus, CalendarDays, Clock, Stethoscope, X, Pencil } from "lucide-react";
+import api from "../api";
+import { PageTitle } from "./AdminPages";
+
+export function FindDoctor(){
+ const [doctors,setDoctors]=useState([]),[selected,setSelected]=useState(null),[form,setForm]=useState({date:"",time:""}),[message,setMessage]=useState(""),[error,setError]=useState("");
+ useEffect(()=>{api.get("/patient/doctors").then(r=>setDoctors(r.data)).catch(e=>setError(e.response?.data?.message||"Unable to load doctors."));},[]);
+ async function book(e){e.preventDefault();setError("");setMessage("");try{await api.post("/patient/appointments",{doctorId:selected._id,...form});setMessage("Appointment booked successfully.");setSelected(null);setForm({date:"",time:""});}catch(e){setError(e.response?.data?.message||"Could not book appointment.");}}
+ return <><PageTitle eyebrow="PATIENT PORTAL" title="Find your doctor" subtitle="Choose a doctor and select a date and time for your appointment."/>
+ {message&&<p className="success-text">{message}</p>}{error&&<p className="error-text">{error}</p>}
+ <div className="doctor-grid">{doctors.map(d=><div className="doctor-card" key={d._id}><div className="doctor-avatar"><Stethoscope size={25}/></div><span className="role-pill doctor">DOCTOR</span><h3>{d.name}</h3><p>{d.specialization||"General physician"}</p><div className="doctor-meta"><span>{d.email}</span></div><button className="btn btn-primary btn-full" onClick={()=>setSelected(d)}><CalendarPlus size={17}/> Book appointment</button></div>)}</div>
+ {!doctors.length&&<div className="panel empty-state"><Stethoscope size={30}/><strong>No doctors available yet</strong><span>Please check again later.</span></div>}
+ {selected&&<div className="modal-backdrop" onMouseDown={()=>setSelected(null)}><div className="modal" onMouseDown={e=>e.stopPropagation()}><div className="modal-head"><div><span className="eyebrow">NEW BOOKING</span><h3>{selected.name}</h3><p className="muted">{selected.specialization}</p></div><button className="icon-button" onClick={()=>setSelected(null)}><X/></button></div><form className="form-stack" onSubmit={book}><label className="field"><span>Appointment date</span><input type="date" min={new Date().toISOString().slice(0,10)} required value={form.date} onChange={e=>setForm({...form,date:e.target.value})}/></label><label className="field"><span>Appointment time (24-hour)</span><input type="time" required value={form.time} onChange={e=>setForm({...form,time:e.target.value})}/></label><p className="muted small-text">A slot is available if this doctor does not already have a booking at the selected date and time.</p><div className="modal-actions"><button type="button" className="btn btn-ghost" onClick={()=>setSelected(null)}>Cancel</button><button className="btn btn-primary">Confirm booking</button></div></form></div></div>}
+ </>;
+}
+
+export function PatientAppointments(){
+ const [appointments,setAppointments]=useState([]),[error,setError]=useState(""),[message,setMessage]=useState(""),[editing,setEditing]=useState(null),[form,setForm]=useState({date:"",time:""});
+ async function load(){try{const r=await api.get("/patient/appointments");setAppointments(r.data);setError("");}catch(e){setError(e.response?.data?.message||"Unable to load appointments.");}}
+ useEffect(()=>{load();},[]);
+ async function update(e){e.preventDefault();try{await api.put(`/patient/appointments/${editing._id}`,form);setEditing(null);setMessage("Appointment updated.");load();}catch(e){setError(e.response?.data?.message||"Could not update appointment.");}}
+ async function cancel(a){if(!window.confirm("Cancel this appointment?"))return;try{await api.delete(`/patient/appointments/${a._id}`);setMessage("Appointment cancelled.");load();}catch(e){setError(e.response?.data?.message||"Could not cancel appointment.");}}
+ return <><PageTitle eyebrow="PATIENT PORTAL" title="My appointments" subtitle="Track, reschedule or cancel your upcoming appointments."/>
+ {message&&<p className="success-text">{message}</p>}{error&&<p className="error-text">{error}</p>}
+ <div className="appointment-list">{appointments.map(a=><div className="appointment-card" key={a._id}><div className="appointment-icon"><CalendarDays/></div><div className="appointment-info"><h3>{a.doctor?.name||"Doctor"}</h3><p>{a.doctor?.specialization||"Consultation"}</p><div className="appointment-meta"><span><CalendarDays size={15}/>{a.date}</span><span><Clock size={15}/>{a.time}</span></div>{a.doctorComment&&<div className="doctor-comment"><strong>Doctor comment:</strong> {a.doctorComment}</div>}</div><div className="appointment-actions"><span className={`status-pill ${a.status.toLowerCase()}`}>{a.status}</span>{a.status==="BOOKED"&&<><button className="btn btn-outline btn-small" onClick={()=>{setEditing(a);setForm({date:a.date,time:a.time});}}><Pencil size={15}/> Reschedule</button><button className="btn btn-danger-light btn-small" onClick={()=>cancel(a)}><X size={15}/> Cancel</button></>}</div></div>)}</div>
+ {!appointments.length&&<div className="panel empty-state"><CalendarDays size={30}/><strong>No appointments yet</strong><span>Choose a doctor to book your first appointment.</span></div>}
+ {editing&&<div className="modal-backdrop" onMouseDown={()=>setEditing(null)}><div className="modal" onMouseDown={e=>e.stopPropagation()}><div className="modal-head"><h3>Reschedule appointment</h3><button className="icon-button" onClick={()=>setEditing(null)}><X/></button></div><form className="form-stack" onSubmit={update}><label className="field"><span>Date</span><input type="date" required value={form.date} onChange={e=>setForm({...form,date:e.target.value})}/></label><label className="field"><span>Time</span><input type="time" required value={form.time} onChange={e=>setForm({...form,time:e.target.value})}/></label><div className="modal-actions"><button type="button" className="btn btn-ghost" onClick={()=>setEditing(null)}>Cancel</button><button className="btn btn-primary">Save changes</button></div></form></div></div>}
+ </>;
+}
